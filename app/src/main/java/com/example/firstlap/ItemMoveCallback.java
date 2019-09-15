@@ -9,14 +9,17 @@ import com.example.firstlap.RecyclerViewAdapter.MyViewHolder;
 public class ItemMoveCallback extends ItemTouchHelper.Callback
 {
     final ItemTouchHelperContract mAdapter;
+    final IGameEndable iGameEndable;
     private boolean mOrderChanged = false;
     private boolean canDragItems = true;
-    private int currentPosition = 0;
+    private int newPosition = 0;
+    private int oldPosition = 0;
 
 
-    public ItemMoveCallback(ItemTouchHelperContract adapter)
+    public ItemMoveCallback(ItemTouchHelperContract adapter, IGameEndable iGameEndable)
     {
         mAdapter = adapter;
+        this.iGameEndable = iGameEndable;
     }
 
 
@@ -33,7 +36,6 @@ public class ItemMoveCallback extends ItemTouchHelper.Callback
     }
 
 
-
     @Override
     public void onSwiped(RecyclerView.ViewHolder viewHolder, int i) { }
 
@@ -45,14 +47,15 @@ public class ItemMoveCallback extends ItemTouchHelper.Callback
         return makeMovementFlags(dragFlags, 0);
     }
 
+
     @Override
     public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target)
     {
-        MyViewHolder myViewHolder = (MyViewHolder) viewHolder;
-        if (myViewHolder.getAdapterPosition() != myViewHolder.getOldPosition())
+        newPosition = target.getAdapterPosition();
+        oldPosition = viewHolder.getAdapterPosition();
+        if (newPosition != oldPosition)
         {
             mOrderChanged = true;
-            currentPosition = target.getAdapterPosition();
         }
 
         mAdapter.onRowMoved(viewHolder.getAdapterPosition(), target.getAdapterPosition());
@@ -65,15 +68,14 @@ public class ItemMoveCallback extends ItemTouchHelper.Callback
     {
         if (actionState == ItemTouchHelper.ACTION_STATE_IDLE && mOrderChanged)
         {
-            canDragItems = false;
-            checkEndGame(currentPosition);
-            mOrderChanged = false;
+            TryEndGame();
         }
         else if (actionState == ItemTouchHelper.ACTION_STATE_DRAG)
         {
             RecyclerViewAdapter.MyViewHolder myViewHolder = (MyViewHolder) viewHolder;
             mAdapter.onRowSelected(myViewHolder);
         }
+
         super.onSelectedChanged(viewHolder, actionState);
     }
 
@@ -88,10 +90,12 @@ public class ItemMoveCallback extends ItemTouchHelper.Callback
     }
 
 
-    void checkEndGame(int fromPosition)
+    void TryEndGame()
     {
-        mAdapter.CheckEndGame(fromPosition);
+        canDragItems = false;
+        iGameEndable.TryEndGame(newPosition, oldPosition);
         canDragItems = true;
+        mOrderChanged = false;
     }
 
 
@@ -100,6 +104,5 @@ public class ItemMoveCallback extends ItemTouchHelper.Callback
         void onRowMoved(int fromPosition, int toPosition);
         void onRowSelected(MyViewHolder myViewHolder);
         void onRowClear(MyViewHolder myViewHolder);
-        void CheckEndGame(int fromPosition);
     }
 }

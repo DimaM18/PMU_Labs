@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Random;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.recyclerview.widget.ItemTouchHelper;
 
@@ -45,34 +44,31 @@ public class GameActivity extends AppCompatActivity implements RecyclerViewAdapt
 
         names.add(getIntent().getStringExtra("firstPlayerName"));
         names.add(getIntent().getStringExtra("secondPlayerName"));
-        span = getIntent().getIntExtra("boardSize", 4);
+        span = getResources().getInteger(R.integer.column_count);
 
         InitGameplay();
     }
 
-    private void InitGameplay()
+
+     void InitGameplay()
     {
         currentPlayerTextView.setText(GAME_IN_PROCESS_TEXT + names.get(GetCurrentPlayerIndex()));
         restartButton.setOnClickListener(this);
         restartButton.setVisibility(View.INVISIBLE);
 
         InitCells();
-        mAdapter = new RecyclerViewAdapter(dataArray,this);
+
+        mAdapter = new RecyclerViewAdapter(dataArray,this, span);
         recyclerView.setAdapter(mAdapter);
 
-        final GridLayoutManager layoutManager1 = new GridLayoutManager(getApplicationContext(), span);
-        recyclerView.setLayoutManager(layoutManager1);
+        final CustomGridLayout layoutManager = new CustomGridLayout(getApplicationContext(), span);
+        recyclerView.setLayoutManager(layoutManager);
 
-        ItemTouchHelper.Callback callback = new ItemMoveCallback(mAdapter);
+        ItemTouchHelper.Callback callback = new ItemMoveCallback(mAdapter, mAdapter);
         touchHelper = new ItemTouchHelper(callback);
         touchHelper.attachToRecyclerView(recyclerView);
     }
 
-
-    static int getRandomNumberInts(int min, int max){
-        Random random = new Random();
-        return random.ints(min,(max+1)).findFirst().getAsInt();
-    }
 
     void InitCells()
     {
@@ -93,26 +89,27 @@ public class GameActivity extends AppCompatActivity implements RecyclerViewAdapt
                 int colorPos = getRandomNumberInts(0, (colors.size() - 1));
                 if (!dataArray.isEmpty())
                 {
-                if (IsTwoItemsWithSameColorRow(dataArray.size(), colors.get(colorPos)) ||
+                    if (IsTwoItemsWithSameColorRow(dataArray.size(), colors.get(colorPos)) ||
                         IsTwoItemsWithSameColorColumn(dataArray.size(), colors.get(colorPos)))
-                {
-                    int color = colors.get(colorPos);
-                    while (color == colors.get(colorPos))
                     {
-                        colorPos = getRandomNumberInts(0, (colors.size() - 1));
+                        int color = colors.get(colorPos);
+                        while (color == colors.get(colorPos))
+                        {
+                            colorPos = getRandomNumberInts(0, (colors.size() - 1));
+                        }
                     }
-                }
                 }
                 dataArray.add(new CellItem(GetColorName(colors.get(colorPos)), colors.get(colorPos)));
             }
         }
     }
 
+
     boolean IsTwoItemsWithSameColorRow(int lastPos, int color)
     {
         int startPost = lastPos - lastPos % 4;
         int count = 0;
-        int endPos = startPost + 4 >= dataArray.size()? dataArray.size() : 4;
+        int endPos = startPost + 4 >= dataArray.size() ? dataArray.size() : 4;
         for (int i = startPost; i < endPos; i++)
         {
             CellItem cell = dataArray.get(i);
@@ -152,6 +149,7 @@ public class GameActivity extends AppCompatActivity implements RecyclerViewAdapt
         return false;
     }
 
+
     String GetColorName(int color)
     {
         switch (color)
@@ -168,6 +166,12 @@ public class GameActivity extends AppCompatActivity implements RecyclerViewAdapt
     int GetCurrentPlayerIndex()
     {
         return isSecondPlayerMove ? 1 : 0;
+    }
+
+
+    private static int getRandomNumberInts(int min, int max){
+        Random random = new Random();
+        return random.ints(min,(max+1)).findFirst().getAsInt();
     }
 
 

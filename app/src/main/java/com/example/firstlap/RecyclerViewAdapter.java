@@ -1,5 +1,6 @@
 package com.example.firstlap;
 
+import android.annotation.SuppressLint;
 import android.graphics.Color;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -8,21 +9,30 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+
+
+interface IGameEndable
+{
+    void TryEndGame(int newPosition, int oldPosition);
+}
 
 
 public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapter.MyViewHolder>
-        implements ItemMoveCallback.ItemTouchHelperContract
+        implements ItemMoveCallback.ItemTouchHelperContract, IGameEndable
 {
     private ArrayList<CellItem> data;
     private final OnMoveEndListener listener;
+    private int step = 0;
 
-
-    public RecyclerViewAdapter(ArrayList<CellItem> data, OnMoveEndListener onMoveEndListener)
+    public RecyclerViewAdapter(ArrayList<CellItem> data, OnMoveEndListener onMoveEndListener, int spanCount)
     {
         this.data = data;
         listener = onMoveEndListener;
+        step = spanCount;
     }
 
     @Override
@@ -75,6 +85,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         if (myViewHolder != null)
         {
             myViewHolder.rowView.setBackgroundColor(Color.GRAY);
+            myViewHolder.rowView.setAlpha(0.5f);
         }
     }
 
@@ -85,19 +96,47 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
         {
             int color = data.get(myViewHolder.getAdapterPosition()).getBackgroundColor();
             myViewHolder.rowView.setBackgroundColor(color);
+            myViewHolder.rowView.setAlpha(1f);
         }
     }
 
+
     @Override
-    public void CheckEndGame(int position)
+    public void TryEndGame(int newPosition, int oldPosition)
+    {
+        AbstractMap.SimpleEntry newPositionResults = IsContainItemsWithSameColorInRowOrColumn(newPosition);
+        int firstValue = (int) newPositionResults.getValue();
+        int secondValue = (int) newPositionResults.getKey();
+
+        if (firstValue == step || secondValue == step)
+        {
+            listener.OnPlayerWin();
+            return;
+        }
+
+        newPositionResults = IsContainItemsWithSameColorInRowOrColumn(oldPosition);
+        firstValue = (int) newPositionResults.getValue();
+        secondValue = (int) newPositionResults.getKey();
+
+        if (firstValue == step || secondValue == step)
+        {
+            listener.OnPlayerWin();
+        }
+        else
+        {
+            listener.OnNeedRefreshPlayerInfo();
+        }
+    }
+
+    AbstractMap.SimpleEntry IsContainItemsWithSameColorInRowOrColumn(int startPosition)
     {
         int sameColorInColumnCount = 0;
         int sameColorInRowCount = 0;
-        int startVerticalPosition = position % 4;
-        int startHorizontalPosition = position - startVerticalPosition;
-        int color = data.get(startVerticalPosition).getBackgroundColor();
+        int startVerticalPosition = startPosition % step;
+        int startHorizontalPosition = startPosition - startVerticalPosition;
+        int color = data.get(startPosition).getBackgroundColor();
 
-        for (int i = startVerticalPosition, j = startHorizontalPosition; i < getItemCount(); i+=4 , j++)
+        for (int i = startVerticalPosition, j = startHorizontalPosition; i < getItemCount(); i+= step , j++)
         {
             CellItem verticalCell = data.get(i);
             if (verticalCell.getBackgroundColor() == color)
@@ -112,14 +151,7 @@ public class RecyclerViewAdapter extends RecyclerView.Adapter<RecyclerViewAdapte
             }
         }
 
-        if (sameColorInRowCount == 4 || sameColorInColumnCount == 4)
-        {
-            listener.OnPlayerWin();
-        }
-        else
-        {
-            listener.OnNeedRefreshPlayerInfo();
-        }
+        return new AbstractMap.SimpleEntry(sameColorInColumnCount, sameColorInRowCount);
     }
 
 
